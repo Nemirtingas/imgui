@@ -300,6 +300,8 @@ void    ImGui_ImplX11_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplX11_UpdateGamepads();
+
+    return true;
 }
 
 // Process X11 mouse/keyboard inputs.

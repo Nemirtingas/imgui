@@ -568,7 +568,7 @@ static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
         [bd->KeyEventResponder updateImePosWithView:view];
 }
 
-void ImGui_ImplOSX_NewFrame(void* _view)
+bool ImGui_ImplOSX_NewFrame(void* _view)
 {
     NSView* view = (NSView*)_view;
     // Setup display size
@@ -590,6 +590,8 @@ void ImGui_ImplOSX_NewFrame(void* _view)
     ImGui_ImplOSX_UpdateMouseCursor();
     ImGui_ImplOSX_UpdateGamepads();
     ImGui_ImplOSX_UpdateImePosWithView(view);
+
+    return true;
 }
 
 bool ImGui_ImplOSX_HandleEvent(void* _event, void* _view)
