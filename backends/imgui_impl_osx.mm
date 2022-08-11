@@ -568,11 +568,9 @@ static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
         [bd->KeyEventResponder updateImePosWithView:view];
 }
 
-void ImGui_ImplOSX_NewFrame(NSView* view)
+void ImGui_ImplOSX_NewFrame(void* _view)
 {
-    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
-
+    NSView* view = (NSView*)_view;
     // Setup display size
     if (view)
     {
@@ -594,8 +592,10 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGui_ImplOSX_UpdateImePosWithView(view);
 }
 
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
+bool ImGui_ImplOSX_HandleEvent(void* _event, void* _view)
 {
+    NSEvent* event = (NSEvent*)_event;
+    NSView* view = (NSView*)_view;
     ImGuiIO& io = ImGui::GetIO();
 
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
