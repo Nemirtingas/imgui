@@ -23,6 +23,8 @@
 #include <ctime>
 #include <cstdint>
 
+//#include <iostream>
+
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-12-08: Update to ImGUi 1.88
@@ -188,6 +190,7 @@ bool    ImGui_ImplX11_Init(void *display, void *window)
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
     bd->hDisplay = reinterpret_cast<Display*>(display);
+    bd->hWindow = reinterpret_cast<Window>(window);
     bd->WantUpdateHasGamepad = true;
     bd->TicksPerSecond = 1000000000.0f / (static_cast<uint64_t>(tsres.tv_nsec) + static_cast<uint64_t>(tsres.tv_sec)*1000000000);
     bd->Time = static_cast<uint64_t>(ts.tv_nsec) + static_cast<uint64_t>(ts.tv_sec)*1000000000;
@@ -321,7 +324,8 @@ static ImGuiKey ImGui_ImplX11_VirtualKeyToImGuiKey(uint32_t param)
 {
     switch (param)
     {
-        case XK_Tab   : return ImGuiKey_Tab;
+        case XK_Tab   :  return ImGuiKey_Tab;
+        case XK_ISO_Left_Tab:  return ImGuiKey_Tab;
         case XK_Left  : return ImGuiKey_LeftArrow;
         case XK_Right : return ImGuiKey_RightArrow;
         case XK_Up    : return ImGuiKey_UpArrow;
@@ -352,16 +356,16 @@ static ImGuiKey ImGui_ImplX11_VirtualKeyToImGuiKey(uint32_t param)
         case XK_Num_Lock: return ImGuiKey_NumLock;
         case XK_Print: return ImGuiKey_PrintScreen;
         case XK_Pause: return ImGuiKey_Pause;
-        case XK_KP_0: return ImGuiKey_Keypad0;
-        case XK_KP_1: return ImGuiKey_Keypad1;
-        case XK_KP_2: return ImGuiKey_Keypad2;
-        case XK_KP_3: return ImGuiKey_Keypad3;
-        case XK_KP_4: return ImGuiKey_Keypad4;
-        case XK_KP_5: return ImGuiKey_Keypad5;
-        case XK_KP_6: return ImGuiKey_Keypad6;
-        case XK_KP_7: return ImGuiKey_Keypad7;
-        case XK_KP_8: return ImGuiKey_Keypad8;
-        case XK_KP_9: return ImGuiKey_Keypad9;
+        case XK_KP_Insert   : case XK_KP_0: return ImGuiKey_Keypad0;
+        case XK_KP_End      : case XK_KP_1: return ImGuiKey_Keypad1;
+        case XK_KP_Down     : case XK_KP_2: return ImGuiKey_Keypad2;
+        case XK_KP_Page_Down: case XK_KP_3: return ImGuiKey_Keypad3;
+        case XK_KP_Left     : case XK_KP_4: return ImGuiKey_Keypad4;
+        case XK_KP_Begin    : case XK_KP_5: return ImGuiKey_Keypad5;
+        case XK_KP_Right    : case XK_KP_6: return ImGuiKey_Keypad6;
+        case XK_KP_Home     : case XK_KP_7: return ImGuiKey_Keypad7;
+        case XK_KP_Up       : case XK_KP_8: return ImGuiKey_Keypad8;
+        case XK_KP_Page_Up  : case XK_KP_9: return ImGuiKey_Keypad9;
         case XK_KP_Decimal: return ImGuiKey_KeypadDecimal;
         case XK_KP_Divide: return ImGuiKey_KeypadDivide;
         case XK_KP_Multiply: return ImGuiKey_KeypadMultiply;
@@ -387,32 +391,32 @@ static ImGuiKey ImGui_ImplX11_VirtualKeyToImGuiKey(uint32_t param)
         case XK_7 : return ImGuiKey_7;
         case XK_8 : return ImGuiKey_8;
         case XK_9 : return ImGuiKey_9;
-        case XK_A : return ImGuiKey_A;
-        case XK_B : return ImGuiKey_B;
-        case XK_C : return ImGuiKey_C;
-        case XK_D : return ImGuiKey_D;
-        case XK_E : return ImGuiKey_E;
-        case XK_F : return ImGuiKey_F;
-        case XK_G : return ImGuiKey_G;
-        case XK_H : return ImGuiKey_H;
-        case XK_I : return ImGuiKey_I;
-        case XK_J : return ImGuiKey_J;
-        case XK_K : return ImGuiKey_K;
-        case XK_L : return ImGuiKey_L;
-        case XK_M : return ImGuiKey_M;
-        case XK_N : return ImGuiKey_N;
-        case XK_O : return ImGuiKey_O;
-        case XK_P : return ImGuiKey_P;
-        case XK_Q : return ImGuiKey_Q;
-        case XK_R : return ImGuiKey_R;
-        case XK_S : return ImGuiKey_S;
-        case XK_T : return ImGuiKey_T;
-        case XK_U : return ImGuiKey_U;
-        case XK_V : return ImGuiKey_V;
-        case XK_W : return ImGuiKey_W;
-        case XK_X : return ImGuiKey_X;
-        case XK_Y : return ImGuiKey_Y;
-        case XK_Z : return ImGuiKey_Z;
+        case XK_a : case XK_A : return ImGuiKey_A;
+        case XK_b : case XK_B : return ImGuiKey_B;
+        case XK_c : case XK_C : return ImGuiKey_C;
+        case XK_d : case XK_D : return ImGuiKey_D;
+        case XK_e : case XK_E : return ImGuiKey_E;
+        case XK_f : case XK_F : return ImGuiKey_F;
+        case XK_g : case XK_G : return ImGuiKey_G;
+        case XK_h : case XK_H : return ImGuiKey_H;
+        case XK_i : case XK_I : return ImGuiKey_I;
+        case XK_j : case XK_J : return ImGuiKey_J;
+        case XK_k : case XK_K : return ImGuiKey_K;
+        case XK_l : case XK_L : return ImGuiKey_L;
+        case XK_m : case XK_M : return ImGuiKey_M;
+        case XK_n : case XK_N : return ImGuiKey_N;
+        case XK_o : case XK_O : return ImGuiKey_O;
+        case XK_p : case XK_P : return ImGuiKey_P;
+        case XK_q : case XK_Q : return ImGuiKey_Q;
+        case XK_r : case XK_R : return ImGuiKey_R;
+        case XK_s : case XK_S : return ImGuiKey_S;
+        case XK_t : case XK_T : return ImGuiKey_T;
+        case XK_u : case XK_U : return ImGuiKey_U;
+        case XK_v : case XK_V : return ImGuiKey_V;
+        case XK_w : case XK_W : return ImGuiKey_W;
+        case XK_x : case XK_X : return ImGuiKey_X;
+        case XK_y : case XK_Y : return ImGuiKey_Y;
+        case XK_z : case XK_Z : return ImGuiKey_Z;
         case XK_F1: return ImGuiKey_F1;
         case XK_F2: return ImGuiKey_F2;
         case XK_F3: return ImGuiKey_F3;
@@ -481,6 +485,16 @@ IMGUI_IMPL_API int ImGui_ImplX11_EventHandler(XEvent &event)
             const bool is_key_down = event.type == KeyPress;
             int vk = XkbKeycodeToKeysym(bd->hDisplay, event.xkey.keycode, 0, event.xkey.state & ShiftMask ? 1 : 0);
 
+			//int keysyms_per_keycode_return;
+    		//KeySym *keysym = XGetKeyboardMapping(bd->hDisplay,
+        	//					event.xkey.keycode,
+        	//					1,
+        	//					&keysyms_per_keycode_return);
+
+			//int vk = *keysym;
+
+            //XFree(keysym);
+
             if( vk >= 0x1000100 && vk <= 0x110ffff )
             {
                 if (is_key_down)
@@ -492,9 +506,27 @@ IMGUI_IMPL_API int ImGui_ImplX11_EventHandler(XEvent &event)
                 ImGui_ImplX11_UpdateKeyModifiers();
 
                 const ImGuiKey key = ImGui_ImplX11_VirtualKeyToImGuiKey(vk);
-                if (key != ImGuiKey_None)
-                    ImGui_ImplX11_AddKeyEvent(key, is_key_down, vk, event.xkey.keycode);
+                if (key == XK_Shift_L)
+                {
+                // Some keys are wrapped with XK_Shift_L
+                // XK_Shift_L Pressed
+                // XK_KP_0 Pressed // real key press
+                // XK_Shift_L Released
+                // ... Wait some time ...
+                // XK_KP_Insert Released
+                // So ignore here XK_Shilt_L
+                }
+                else
+                {                
+                	if (key != ImGuiKey_None)
+                    	ImGui_ImplX11_AddKeyEvent(key, is_key_down, vk, event.xkey.keycode);
+
+                	if (is_key_down && vk < 256)
+                    	io.AddInputCharacter(vk);
+                }
             }
+
+            //
             return 0;
         }
 
