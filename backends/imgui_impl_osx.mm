@@ -102,14 +102,15 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
  and GLFW:
   https://github.com/glfw/glfw/blob/b55a517ae0c7b5127dffa79a64f5406021bf9076/src/cocoa_window.m#L722-L723
  */
-@interface KeyEventResponder: NSView<NSTextInputClient>
+@interface KeyEventResponder: NSView<NSTextInputClient> {
+    float _posX;
+    float _posY;
+    NSRect _imeRect;
+}
 @end
 
 @implementation KeyEventResponder
 {
-    float _posX;
-    float _posY;
-    NSRect _imeRect;
 }
 
 #pragma mark - Public
