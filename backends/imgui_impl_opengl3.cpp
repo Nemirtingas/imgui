@@ -245,6 +245,11 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         return false;
     }
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+    if (gladLoaderLoadGL() < GLAD_MAKE_VERSION(3, 1))
+    {
+        return false;
+    }
 #endif
 
     // Setup backend capabilities flags

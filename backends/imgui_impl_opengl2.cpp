@@ -53,10 +53,12 @@
 #if defined(__APPLE__)
 #define GL_SILENCE_DEPRECATION
 //#include <OpenGL/gl.h>
-#include <glad/gl.h>
+
 #else
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #endif
+
+#include <glad/gl.h>
 
 struct ImGui_ImplOpenGL2_Data
 {
@@ -83,7 +85,7 @@ bool    ImGui_ImplOpenGL2_Init()
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl2";
 
-    return true;
+    return gladLoaderLoadGL() >= GLAD_MAKE_VERSION(2, 0);
 }
 
 void    ImGui_ImplOpenGL2_Shutdown()
