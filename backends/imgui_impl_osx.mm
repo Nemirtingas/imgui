@@ -83,7 +83,6 @@ static inline CFTimeInterval GetMachAbsoluteTimeInSeconds()    { return static_c
 
 // Forward Declarations
 static void ImGui_ImplOSX_AddTrackingArea(NSView* _Nonnull view);
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -603,7 +602,7 @@ bool ImGui_ImplOSX_NewFrame(NSView* view)
     return true;
 }
 
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
+bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
