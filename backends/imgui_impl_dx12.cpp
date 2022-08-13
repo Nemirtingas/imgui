@@ -682,11 +682,13 @@ void ImGui_ImplDX12_Shutdown()
     IM_DELETE(bd);
 }
 
-void ImGui_ImplDX12_NewFrame()
+bool ImGui_ImplDX12_NewFrame()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX12_Init()?");
 
     if (!bd->pPipelineState)
-        ImGui_ImplDX12_CreateDeviceObjects();
+        return ImGui_ImplDX12_CreateDeviceObjects();
+
+    return true;
 }

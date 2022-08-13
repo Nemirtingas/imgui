@@ -568,7 +568,7 @@ static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
         [bd->KeyEventResponder updateImePosWithView:view];
 }
 
-void ImGui_ImplOSX_NewFrame(NSView* view)
+bool ImGui_ImplOSX_NewFrame(NSView* view)
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
@@ -592,6 +592,8 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGui_ImplOSX_UpdateMouseCursor();
     ImGui_ImplOSX_UpdateGamepads();
     ImGui_ImplOSX_UpdateImePosWithView(view);
+
+    return true;
 }
 
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)

@@ -529,11 +529,13 @@ void ImGui_ImplDX11_Shutdown()
     IM_DELETE(bd);
 }
 
-void ImGui_ImplDX11_NewFrame()
+bool ImGui_ImplDX11_NewFrame()
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX11_Init()?");
 
     if (!bd->pFontSampler)
-        ImGui_ImplDX11_CreateDeviceObjects();
+        return ImGui_ImplDX11_CreateDeviceObjects();
+
+    return true;
 }
