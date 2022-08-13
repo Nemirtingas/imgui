@@ -18,8 +18,11 @@
 #import "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import <GameController/GameController.h>
 #import <time.h>
+
+#if not defined(IMGUI_DISABLE_APPLE_GAMEPAD)
+#import <GameController/GameController.h>
+#endif
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -509,6 +512,8 @@ static void ImGui_ImplOSX_UpdateGamepads()
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
 
+#if not defined(IMGUI_DISABLE_APPLE_GAMEPAD)
+
 #if APPLE_HAS_CONTROLLER
     GCController* controller = GCController.current;
 #else
@@ -559,6 +564,7 @@ static void ImGui_ImplOSX_UpdateGamepads()
     #undef MAP_ANALOG
 
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+#endif
 }
 
 static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
