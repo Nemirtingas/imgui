@@ -435,7 +435,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
 }
 
-void ImGui_ImplDX9_NewFrame()
+bool ImGui_ImplDX9_NewFrame()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX9_Init()?");

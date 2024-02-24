@@ -72,10 +72,13 @@
 #endif
 #if defined(__APPLE__)
 #define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl.h>
+//#include <OpenGL/gl.h>
+
 #else
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #endif
+
+#include <glad/gl.h>
 
 // [Debugging]
 //#define IMGUI_IMPL_OPENGL_DEBUG
@@ -103,7 +106,35 @@ static ImGui_ImplOpenGL2_Data* ImGui_ImplOpenGL2_GetBackendData()
 }
 
 // Functions
-void    ImGui_ImplOpenGL2_NewFrame()
+bool    ImGui_ImplOpenGL2_Init()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
+
+    // Setup backend capabilities flags
+    ImGui_ImplOpenGL2_Data* bd = IM_NEW(ImGui_ImplOpenGL2_Data)();
+    io.BackendRendererUserData = (void*)bd;
+    io.BackendRendererName = "imgui_impl_opengl2";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;       // We can honor ImGuiPlatformIO::Textures[] requests during render.
+
+    return gladLoaderLoadGL() >= GLAD_MAKE_VERSION(2, 0);
+}
+
+void    ImGui_ImplOpenGL2_Shutdown()
+{
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
+
+    ImGui_ImplOpenGL2_DestroyDeviceObjects();
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasTextures);
+    IM_DELETE(bd);
+}
+
+bool    ImGui_ImplOpenGL2_NewFrame()
 {
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL2_Init()?");

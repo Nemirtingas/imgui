@@ -48,6 +48,12 @@
 #import <time.h>
 #import <Metal/Metal.h>
 
+#if defined(__i386__) || defined(__i386) || defined(i386)
+#define EXPLICIT_PROPERTIES 1
+#endif
+
+#define DISABLE_CACHE 1
+
 #pragma mark - Support classes
 
 // A wrapper around a MTLBuffer object that knows the last time it was reused
@@ -134,7 +140,39 @@ bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
 
 #pragma mark - Dear ImGui Metal Backend API
 
-void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
+bool ImGui_ImplMetal_Init(id<MTLDevice> device)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
+
+    ImGui_ImplMetal_Data* bd = IM_NEW(ImGui_ImplMetal_Data)();
+    io.BackendRendererUserData = (void*)bd;
+    io.BackendRendererName = "imgui_impl_metal";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
+
+    bd->SharedMetalContext = [[MetalContext alloc] init];
+    bd->SharedMetalContext.device = device;
+
+    return true;
+}
+
+void ImGui_ImplMetal_Shutdown()
+{
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_UNUSED(bd);
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
+    ImGui_ImplMetal_DestroyDeviceObjects();
+    ImGui_ImplMetal_DestroyBackendData();
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
+}
+
+bool ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
@@ -144,7 +182,9 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 #endif
     if (bd->SharedMetalContext.depthStencilState == nil)
-        ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+        return ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+    
+    return true;
 }
 
 static void ImGui_ImplMetal_SetupRenderState(ImDrawData* draw_data, id<MTLCommandBuffer> commandBuffer,
@@ -217,14 +257,22 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
 
     // Try to retrieve a render pipeline state that is compatible with the framebuffer config for this frame
     // The hit rate for this cache should be very near 100%.
-    id<MTLRenderPipelineState> renderPipelineState = ctx.renderPipelineStateCache[ctx.framebufferDescriptor];
+    id<MTLRenderPipelineState> renderPipelineState = nil;
+    // TODO: FIXME
+    #if !DISABLE_CACHE
+        renderPipelineState = ctx.renderPipelineStateCache[ctx.framebufferDescriptor];
+    #endif
+
     if (renderPipelineState == nil)
     {
         // No luck; make a new render pipeline state
         renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:ctx.framebufferDescriptor device:commandBuffer.device];
 
         // Cache render pipeline state for later reuse
+        // TODO: FIXME
+        #if !DISABLE_CACHE
         ctx.renderPipelineStateCache[ctx.framebufferDescriptor] = renderPipelineState;
+        #endif
     }
 
     size_t vertexBufferLength = (size_t)draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -303,6 +351,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     }
 
     MetalContext* sharedMetalContext = bd->SharedMetalContext;
+    // TODO: FIXME
+    #if !DISABLE_CACHE
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
         @synchronized(sharedMetalContext.bufferCacheLock)
@@ -311,6 +361,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
             [sharedMetalContext.bufferCache addObject:indexBuffer];
         }
     }];
+    #endif
+
     bd->RenderCommandEncoder = nil;
 }
 
@@ -414,9 +466,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         if (tex->RefCount == 1)
             ImGui_ImplMetal_DestroyTexture(tex);
 
-    [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
-    bd->SharedMetalContext.samplerStateLinear = nil;
-    bd->SharedMetalContext.samplerStateNearest = nil;
+    // TODO: FIXME
+    if (!DISABLE_CACHE)
+    {
+        [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
+        bd->SharedMetalContext.samplerStateLinear = nil;
+        bd->SharedMetalContext.samplerStateNearest = nil;
+    }
 }
 
 bool ImGui_ImplMetal_Init(id<MTLDevice> device)
@@ -462,6 +518,32 @@ void ImGui_ImplMetal_Shutdown()
 #pragma mark - MetalBuffer implementation
 
 @implementation MetalBuffer
+#if EXPLICIT_PROPERTIES
+
+id<MTLBuffer> _buffer;
+- (void)setBuffer:(id<MTLBuffer>)v
+{
+    _buffer = v;
+}
+
+- (id<MTLBuffer>)buffer
+{
+    return _buffer;
+}
+
+double _lastReuseTime;
+- (void)setLastReuseTime:(double)v
+{
+    _lastReuseTime = v;
+}
+
+- (double)lastReuseTime
+{
+    return _lastReuseTime;
+}
+
+#endif
+
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer
 {
     if ((self = [super init]))
@@ -476,6 +558,53 @@ void ImGui_ImplMetal_Shutdown()
 #pragma mark - FramebufferDescriptor implementation
 
 @implementation FramebufferDescriptor
+#if EXPLICIT_PROPERTIES
+unsigned long _sampleCount;
+- (void)setSampleCount:(unsigned long)v
+{
+    _sampleCount = v;
+}
+
+- (unsigned long)sampleCount
+{
+    return _sampleCount;
+}
+
+MTLPixelFormat _colorPixelFormat;
+- (void)setColorPixelFormat:(MTLPixelFormat)v
+{
+    _colorPixelFormat = v;
+}
+
+- (MTLPixelFormat)colorPixelFormat
+{
+    return _colorPixelFormat;
+}
+
+MTLPixelFormat _depthPixelFormat;
+- (void)setDepthPixelFormat:(MTLPixelFormat)v
+{
+    _depthPixelFormat = v;
+}
+
+- (MTLPixelFormat)depthPixelFormat
+{
+    return _depthPixelFormat;
+}
+
+MTLPixelFormat _stencilPixelFormat;
+- (void)setStencilPixelFormat:(MTLPixelFormat)v
+{
+    _stencilPixelFormat = v;
+}
+
+- (MTLPixelFormat)stencilPixelFormat
+{
+    return _stencilPixelFormat;
+}
+
+#endif
+
 - (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor*)renderPassDescriptor
 {
     if ((self = [super init]))
@@ -536,6 +665,86 @@ void ImGui_ImplMetal_Shutdown()
 #pragma mark - MetalContext implementation
 
 @implementation MetalContext
+#if EXPLICIT_PROPERTIES
+id<MTLDevice> _device;
+- (void)setDevice:(id<MTLDevice>)v
+{
+    _device = v;
+}
+
+- (id<MTLDevice>)device
+{
+    return _device;
+}
+
+id<MTLDepthStencilState> _depthStencilState;
+- (void)setDepthStencilState:(id<MTLDepthStencilState>)v
+{
+    _depthStencilState = v;
+}
+
+- (id<MTLDepthStencilState>)depthStencilState
+{
+    return _depthStencilState;
+}
+
+FramebufferDescriptor* _framebufferDescriptor;
+- (void)setFramebufferDescriptor:(FramebufferDescriptor*)v
+{
+    _framebufferDescriptor = v;
+}
+
+- (FramebufferDescriptor*)framebufferDescriptor
+{
+    return _framebufferDescriptor;
+}
+
+NSMutableDictionary* _renderPipelineStateCache;
+- (void)setRenderPipelineStateCache:(NSMutableDictionary*)v
+{
+    _renderPipelineStateCache = v;
+}
+
+- (NSMutableDictionary*)renderPipelineStateCache
+{
+    return _renderPipelineStateCache;
+}
+
+id<MTLTexture> _fontTexture;
+- (void)setFontTexture:(id<MTLTexture>)v
+{
+    _fontTexture = v;
+}
+
+- (id<MTLTexture>)fontTexture
+{
+    return _fontTexture;
+}
+
+NSMutableArray<MetalBuffer*>* _bufferCache;
+- (void)setBufferCache:(NSMutableArray<MetalBuffer*>*)v
+{
+    _bufferCache = v;
+}
+
+- (NSMutableArray<MetalBuffer*>*)bufferCache
+{
+    return _bufferCache;
+}
+
+double _lastBufferCachePurge;
+- (void)setLastBufferCachePurge:(double)v
+{
+    _lastBufferCachePurge = v;
+}
+
+- (double)lastBufferCachePurge
+{
+    return _lastBufferCachePurge;
+}
+
+#endif
+
 - (instancetype)init
 {
     if ((self = [super init]))
@@ -552,7 +761,9 @@ void ImGui_ImplMetal_Shutdown()
 {
     double now = GetMachAbsoluteTimeInSeconds();
 
-    @synchronized(self.bufferCacheLock)
+    // TODO: FIXME
+    #if !DISABLE_CACHE
+    @synchronized(self.bufferCache)
     {
         // Purge old buffers that haven't been useful for a while
         if (now - self.lastBufferCachePurge > 1.0)
@@ -578,6 +789,7 @@ void ImGui_ImplMetal_Shutdown()
             return bestCandidate;
         }
     }
+    #endif
 
     // No luck; make a new buffer
     id<MTLBuffer> backing = [device newBufferWithLength:length options:MTLResourceStorageModeShared];
