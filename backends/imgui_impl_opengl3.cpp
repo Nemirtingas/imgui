@@ -163,6 +163,8 @@
 #else
 #include <GLES3/gl3.h>          // Use GL ES 3
 #endif
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+#include <glad/gl.h>
 #elif !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
 // Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
 // Helper libraries are often used for this purpose! Here we are using our own minimal custom loader based on gl3w.
@@ -293,6 +295,11 @@ bool ImGui_ImplOpenGL3_InitLoader()
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         return false;
     }
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+    if (gladLoaderLoadGL() < GLAD_MAKE_VERSION(3, 1))
+    {
+        return false;
+    }
 #endif
     return true;
 }
@@ -307,6 +314,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Initialize loader
     if (!ImGui_ImplOpenGL3_InitLoader())
         return false;
+
 
     // Setup backend capabilities flags
     ImGui_ImplOpenGL3_Data* bd = IM_NEW(ImGui_ImplOpenGL3_Data)();
@@ -423,16 +431,18 @@ void    ImGui_ImplOpenGL3_Shutdown()
     IM_DELETE(bd);
 }
 
-void    ImGui_ImplOpenGL3_NewFrame()
+bool    ImGui_ImplOpenGL3_NewFrame()
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL3_Init()?");
 
-    ImGui_ImplOpenGL3_InitLoader(); // Lazily init loader if not already done for e.g. DLL boundaries.
+    if (!ImGui_ImplOpenGL3_InitLoader()) // Lazily init loader if not already done for e.g. DLL boundaries.
+        return false;
 
     if (!bd->ShaderHandle)
-        if (!ImGui_ImplOpenGL3_CreateDeviceObjects())
-            IM_ASSERT(0 && "ImGui_ImplOpenGL3_CreateDeviceObjects() failed!");
+        return ImGui_ImplOpenGL3_CreateDeviceObjects();
+    
+    return true;
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)

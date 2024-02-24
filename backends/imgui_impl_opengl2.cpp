@@ -66,10 +66,13 @@
 #endif
 #if defined(__APPLE__)
 #define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl.h>
+//#include <OpenGL/gl.h>
+
 #else
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #endif
+
+#include <glad/gl.h>
 
 // [Debugging]
 //#define IMGUI_IMPL_OPENGL_DEBUG
@@ -106,7 +109,7 @@ bool    ImGui_ImplOpenGL2_Init()
     io.BackendRendererName = "imgui_impl_opengl2";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;       // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-    return true;
+    return gladLoaderLoadGL() >= GLAD_MAKE_VERSION(2, 0);
 }
 
 void    ImGui_ImplOpenGL2_Shutdown()
@@ -122,7 +125,7 @@ void    ImGui_ImplOpenGL2_Shutdown()
     IM_DELETE(bd);
 }
 
-void    ImGui_ImplOpenGL2_NewFrame()
+bool    ImGui_ImplOpenGL2_NewFrame()
 {
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL2_Init()?");

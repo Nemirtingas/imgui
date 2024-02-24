@@ -26,8 +26,11 @@
 #import "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import <GameController/GameController.h>
 #import <time.h>
+
+#if not defined(IMGUI_DISABLE_APPLE_GAMEPAD)
+#import <GameController/GameController.h>
+#endif
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -77,6 +80,10 @@
 #define APPLE_HAS_CONTROLLER     (__IPHONE_OS_VERSION_MIN_REQUIRED >= 140000 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000 || __TV_OS_VERSION_MIN_REQUIRED >= 140000)
 #define APPLE_HAS_THUMBSTICKS    (__IPHONE_OS_VERSION_MIN_REQUIRED >= 120100 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101401 || __TV_OS_VERSION_MIN_REQUIRED >= 120100)
 
+//@interface NSWindow (Extensions)
+//- (NSPoint)convertPointFromScreen:(NSPoint)point API_AVAILABLE(macos(10.12));
+//@end
+
 @class ImGuiObserver;
 @class KeyEventResponder;
 
@@ -102,7 +109,6 @@ static inline CFTimeInterval    GetMachAbsoluteTimeInSeconds()      { return (CF
 
 // Forward Declarations
 static void ImGui_ImplOSX_AddTrackingArea(NSView* _Nonnull view);
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -128,11 +134,9 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 @end
 
 @implementation KeyEventResponder
-{
     float _posX;
     float _posY;
     NSRect _imeRect;
-}
 
 #pragma mark - Public
 
@@ -476,7 +480,6 @@ bool ImGui_ImplOSX_Init(NSView* view)
     bd->KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
     bd->InputContext = [[NSTextInputContext alloc] initWithClient:bd->KeyEventResponder];
     [view addSubview:bd->KeyEventResponder];
-    ImGui_ImplOSX_AddTrackingArea(view);
 
     platform_io.Platform_SetImeDataFn = [](ImGuiContext*, ImGuiViewport*, ImGuiPlatformImeData* data) -> void
     {
@@ -555,6 +558,8 @@ static void ImGui_ImplOSX_UpdateGamepads()
 {
     ImGuiIO& io = ImGui::GetIO();
 
+#if not defined(IMGUI_DISABLE_APPLE_GAMEPAD)
+
 #if APPLE_HAS_CONTROLLER
     GCController* controller = GCController.current;
 #else
@@ -605,6 +610,7 @@ static void ImGui_ImplOSX_UpdateGamepads()
     #undef MAP_ANALOG
 
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+#endif
 }
 
 static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
@@ -615,7 +621,7 @@ static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
         [bd->KeyEventResponder updateImePosWithView:view];
 }
 
-void ImGui_ImplOSX_NewFrame(NSView* view)
+bool ImGui_ImplOSX_NewFrame(NSView* view)
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOSX_Init()?");
@@ -637,9 +643,44 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - bd->Time);
     bd->Time = current_time;
 
-    ImGui_ImplOSX_UpdateMouseCursor();
+    //ImGui_ImplOSX_UpdateMouseCursor();
     ImGui_ImplOSX_UpdateGamepads();
     ImGui_ImplOSX_UpdateImePosWithView(view);
+
+    return true;
+}
+
+NSString *translateInputForKeyDown(NSEvent *event, UInt32 *deadKeyState)
+{
+    // http://stackoverflow.com/questions/12547007/convert-key-code-into-key-equivalent-string
+    // http://stackoverflow.com/questions/8263618/convert-virtual-key-code-to-unicode-string
+
+    const size_t unicodeStringLength = 4;
+    UniChar unicodeString[unicodeStringLength]= { 0, };
+    UniCharCount reallength= 0;
+    NSString *nsstring= nil;
+
+    TISInputSourceRef fkis= TISCopyCurrentKeyboardInputSource();
+    if (fkis) {
+        CFDataRef cflayoutdata= (CFDataRef)TISGetInputSourceProperty(fkis, kTISPropertyUnicodeKeyLayoutData);
+        const UCKeyboardLayout *keyboardlayout= (const UCKeyboardLayout *)CFDataGetBytePtr(cflayoutdata);
+        CGEventFlags flags = [event modifierFlags];
+        UInt32 keymodifiers = (flags >> 16) & 0xFF;
+
+        UCKeyTranslate(keyboardlayout,
+                            [event keyCode], kUCKeyActionDown, keymodifiers,
+                            LMGetKbdType(), 0,
+                            deadKeyState,
+                            unicodeStringLength, &reallength, unicodeString);
+        ::CFRelease(fkis);
+    }
+
+
+    if (reallength>0) {
+        nsstring= (NSString *)CFStringCreateWithCharacters(kCFAllocatorDefault, unicodeString, reallength);
+    }
+
+    return nsstring;
 }
 
 // Must only be called for a mouse event, otherwise an exception occurs
@@ -662,7 +703,7 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
     }
 }
 
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
+bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
     if (event.window != view.window)
@@ -694,8 +735,8 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged || event.type == NSEventTypeRightMouseDragged || event.type == NSEventTypeOtherMouseDragged)
     {
         NSPoint mousePoint = event.locationInWindow;
-        if (event.window == nil)
-            mousePoint = [[view window] convertPointFromScreen:mousePoint];
+        //if (event.window == nil)
+        //    mousePoint = [[view window] convertPointFromScreen:mousePoint];
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         if ([view isFlipped])
             mousePoint = NSMakePoint(mousePoint.x, mousePoint.y);
@@ -751,13 +792,22 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
     {
-        if ([event isARepeat])
+        if ([event isARepeat] && event.type == NSEventTypeKeyUp)
+        {
             return io.WantCaptureKeyboard;
+        }
 
         int key_code = (int)[event keyCode];
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
+
+        if (event.type == NSEventTypeKeyDown)
+        {
+            ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+            NSString *utf8Key = translateInputForKeyDown(event, &bd->DeadKeyState);
+            io.AddInputCharactersUTF8(utf8Key.UTF8String);
+        }
 
         return io.WantCaptureKeyboard;
     }
