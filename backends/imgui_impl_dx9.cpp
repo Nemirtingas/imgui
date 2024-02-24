@@ -410,13 +410,15 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     if (bd->FontTexture) { bd->FontTexture->Release(); bd->FontTexture = nullptr; ImGui::GetIO().Fonts->SetTexID(0); } // We copied bd->pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 
-void ImGui_ImplDX9_NewFrame()
+bool ImGui_ImplDX9_NewFrame()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX9_Init()?");
 
     if (!bd->FontTexture)
-        ImGui_ImplDX9_CreateDeviceObjects();
+        return ImGui_ImplDX9_CreateDeviceObjects();
+
+    return true;
 }
 
 //-----------------------------------------------------------------------------

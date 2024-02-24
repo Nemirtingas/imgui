@@ -1193,13 +1193,15 @@ void ImGui_ImplVulkan_Shutdown()
     IM_DELETE(bd);
 }
 
-void ImGui_ImplVulkan_NewFrame()
+bool ImGui_ImplVulkan_NewFrame()
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplVulkan_Init()?");
 
     if (!bd->FontTexture.DescriptorSet)
-        ImGui_ImplVulkan_CreateFontsTexture();
+        return ImGui_ImplVulkan_CreateFontsTexture();
+
+    return true;
 }
 
 void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
