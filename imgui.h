@@ -3949,6 +3949,12 @@ struct ImGuiPlatformImeData
 // Please keep your copy of dear imgui up to date! Occasionally set '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' in imconfig.h to stay ahead.
 //-----------------------------------------------------------------------------
 
+namespace ImGui
+{
+    IMGUI_API void BufferingBar(const char* label, float value, const ImVec2& size_arg = ImVec2(0.0f, 0.0f));
+    IMGUI_API void Spinner(const char* label, float radius, int thickness);
+}
+
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {

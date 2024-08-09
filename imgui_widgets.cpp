@@ -10601,5 +10601,95 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
         *out_just_closed = close_button_pressed;
 }
 
+IMGUI_API void ImGui::BufferingBar(const char* label, float value, const ImVec2& size_arg)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+    ImVec2 pos = window->DC.CursorPos;
+    const ImVec2 frame_size = CalcItemSize(size_arg, CalcItemWidth(), label_size.y / 2);
+    const ImVec2 total_size = ImVec2(frame_size.x + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), frame_size.y + style.FramePadding.y * 2);
+
+    const ImRect frame_bb(pos, pos + frame_size);
+    const ImRect total_bb(frame_bb.Min, frame_bb.Min + total_size);
+
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    if (!ImGui::ItemAdd(total_bb, id))
+        return;
+
+    // Render
+    const float circleStart = frame_size.x * 0.95f;
+    const float circleEnd = frame_size.x;
+    const float circleWidth = circleEnd - circleStart;
+
+    window->DrawList->AddRectFilled(frame_bb.Min + ImVec2(0, style.FramePadding.y), ImVec2(pos.x + circleStart, frame_bb.Max.y + style.FramePadding.y), GetColorU32(ImGuiCol_FrameBg));
+    window->DrawList->AddRectFilled(frame_bb.Min + ImVec2(0, style.FramePadding.y), ImVec2(pos.x + circleStart * value, frame_bb.Max.y + style.FramePadding.y), GetColorU32(ImGuiCol_FrameBgActive));
+
+    if (value < 1.0f)
+    {
+        const float t = g.Time;
+        const float r = frame_size.y / 2;
+        const float speed = 1.5f;
+
+        const float a = speed * 0;
+        const float b = speed * 0.333f;
+        const float c = speed * 0.666f;
+
+        const float o1 = (circleWidth + r) * (t + a - speed * (int)((t + a) / speed)) / speed;
+        const float o2 = (circleWidth + r) * (t + b - speed * (int)((t + b) / speed)) / speed;
+        const float o3 = (circleWidth + r) * (t + c - speed * (int)((t + c) / speed)) / speed;
+
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o1, frame_bb.Min.y + style.FramePadding.y + r), r, GetColorU32(ImGuiCol_FrameBg));
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o2, frame_bb.Min.y + style.FramePadding.y + r), r, GetColorU32(ImGuiCol_FrameBg));
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o3, frame_bb.Min.y + style.FramePadding.y + r), r, GetColorU32(ImGuiCol_FrameBg));
+    }
+
+    RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y), label);
+}
+
+IMGUI_API void ImGui::Spinner(const char* label, float radius, int thickness)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+
+    ImVec2 pos = window->DC.CursorPos;
+    ImVec2 size((radius) * 2, (radius + style.FramePadding.y) * 2);
+
+    const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+    ItemSize(bb, style.FramePadding.y);
+    if (!ItemAdd(bb, id))
+        return;
+
+    // Render
+    window->DrawList->PathClear();
+
+    int num_segments = 30;
+    float start = ImAbs(ImSin(g.Time * 1.8f) * (num_segments - 5));
+
+    const float a_min = IM_PI * 2.0f * start / (float)num_segments;
+    const float a_max = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
+
+    const ImVec2 centre = ImVec2(pos.x + radius, pos.y + radius + style.FramePadding.y);
+
+    for (int i = 0; i < num_segments; i++) {
+        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+        window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + g.Time * 8) * radius,
+            centre.y + ImSin(a + g.Time * 8) * radius));
+    }
+
+    window->DrawList->PathStroke(GetColorU32(ImGuiCol_FrameBgActive), false, thickness);
+}
 
 #endif // #ifndef IMGUI_DISABLE
