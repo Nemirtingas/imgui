@@ -297,9 +297,7 @@ bool ImGui_ImplOpenGL3_InitLoader()
     }
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
     if (gladLoaderLoadGL() < GLAD_MAKE_VERSION(3, 1))
-    {
         return false;
-    }
 #endif
     return true;
 }
@@ -335,7 +333,14 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     if (major == 0 && minor == 0)
-        sscanf(gl_version_str, "%d.%d", &major, &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+    {
+        // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+        const char* gl_version = (const char*)glGetString(GL_VERSION);
+        if (gl_version == nullptr)
+            return false;
+
+        sscanf(gl_version, "%d.%d", &major, &minor);
+    }
     bd->GlVersion = (GLuint)(major * 100 + minor * 10);
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &bd->MaxTextureSize);
 
