@@ -11124,7 +11124,7 @@ IMGUI_API void ImGui::Spinner(const char* label, float radius, int thickness)
             centre.y + ImSin(a + g.Time * 8) * radius));
     }
 
-    window->DrawList->PathStroke(GetColorU32(ImGuiCol_FrameBgActive), false, thickness);
+    window->DrawList->PathStroke(GetColorU32(ImGuiCol_FrameBgActive), thickness);
 }
 
 #endif // #ifndef IMGUI_DISABLE
