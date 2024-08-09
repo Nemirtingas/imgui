@@ -190,6 +190,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
         return;
 
     // Backup GL state
+    GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -197,6 +198,8 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     GLint last_shade_model; glGetIntegerv(GL_SHADE_MODEL, &last_shade_model);
     GLint last_tex_env_mode; glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &last_tex_env_mode);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
+
+    glUseProgram(0);
 
     // Setup desired GL state
     ImGui_ImplOpenGL2_SetupRenderState(draw_data, fb_width, fb_height);
@@ -260,6 +263,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
     glShadeModel(last_shade_model);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, last_tex_env_mode);
+    glUseProgram(last_program);
 }
 
 bool ImGui_ImplOpenGL2_CreateFontsTexture()
