@@ -94,7 +94,7 @@ static void ImGui_ImplX11_SendClipboard(XSelectionRequestEvent* sender)
 
 static void ImGui_ImplX11_SetClipboardText(ImGuiContext* ctx, const char* text)
 {
-    ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
+    ImGui_ImplX11_Data* bd = reinterpret_cast<ImGui_ImplX11_Data*>(ctx->PlatformIO.Platform_ClipboardUserData);
 
     bd->ClipboardBufferLength = strlen(text);
     if(bd->ClipboardBufferLength > 0)
@@ -117,7 +117,7 @@ static void ImGui_ImplX11_SetClipboardText(ImGuiContext* ctx, const char* text)
 
 static const char* ImGui_ImplX11_GetClipboardText(ImGuiContext* ctx)
 {
-    ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
+    ImGui_ImplX11_Data* bd = reinterpret_cast<ImGui_ImplX11_Data*>(ctx->PlatformIO.Platform_ClipboardUserData);
 
     XEvent event;
     char *result;
