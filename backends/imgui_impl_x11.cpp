@@ -94,7 +94,7 @@ static void ImGui_ImplX11_SendClipboard(XSelectionRequestEvent* sender)
 
 static void ImGui_ImplX11_SetClipboardText(ImGuiContext* ctx, const char* text)
 {
-    ImGui_ImplX11_Data* bd = reinterpret_cast<ImGui_ImplX11_Data*>(ctx->PlatformIO.Platform_ClipboardUserData);
+    ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
 
     bd->ClipboardBufferLength = strlen(text);
     if(bd->ClipboardBufferLength > 0)
@@ -117,7 +117,7 @@ static void ImGui_ImplX11_SetClipboardText(ImGuiContext* ctx, const char* text)
 
 static const char* ImGui_ImplX11_GetClipboardText(ImGuiContext* ctx)
 {
-    ImGui_ImplX11_Data* bd = reinterpret_cast<ImGui_ImplX11_Data*>(ctx->PlatformIO.Platform_ClipboardUserData);
+    ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
 
     XEvent event;
     char *result;
@@ -302,7 +302,6 @@ bool    ImGui_ImplX11_NewFrame()
 {
     ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
     unsigned int width, height;
     Window unused_window;
