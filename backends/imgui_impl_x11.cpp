@@ -92,7 +92,7 @@ static void ImGui_ImplX11_SendClipboard(XSelectionRequestEvent* sender)
     XSendEvent(bd->hDisplay, sender->requestor, True, NoEventMask, (XEvent *)&event);
 }
 
-static void ImGui_ImplX11_SetClipboardText(void* user_data, const char* text)
+static void ImGui_ImplX11_SetClipboardText(ImGuiContext* ctx, const char* text)
 {
     ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
 
@@ -115,7 +115,7 @@ static void ImGui_ImplX11_SetClipboardText(void* user_data, const char* text)
     }
 }
 
-static const char* ImGui_ImplX11_GetClipboardText(void *user_data)
+static const char* ImGui_ImplX11_GetClipboardText(ImGuiContext* ctx)
 {
     ImGui_ImplX11_Data* bd = ImGui_ImplX11_GetBackendData();
 
@@ -184,8 +184,10 @@ bool    ImGui_ImplX11_Init(void *display, void *window, void* XQueryPointerFunct
     io.BackendPlatformName = "imgui_impl_X11";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-    io.GetClipboardTextFn = ImGui_ImplX11_GetClipboardText;
-    io.SetClipboardTextFn = ImGui_ImplX11_SetClipboardText;
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_GetClipboardTextFn = ImGui_ImplX11_GetClipboardText;
+    platform_io.Platform_SetClipboardTextFn = ImGui_ImplX11_SetClipboardText;
 
     timespec ts, tsres;
     clock_getres(CLOCK_MONOTONIC_RAW, &tsres);
@@ -218,8 +220,10 @@ void    ImGui_ImplX11_Shutdown()
     IM_ASSERT(bd != NULL && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    io.GetClipboardTextFn = NULL;
-    io.SetClipboardTextFn = NULL;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_GetClipboardTextFn = NULL;
+    platform_io.Platform_SetClipboardTextFn = NULL;
+
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
 
