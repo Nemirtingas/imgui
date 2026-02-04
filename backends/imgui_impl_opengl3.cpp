@@ -329,8 +329,8 @@ bool    ImGui_ImplOpenGL3_NewFrame()
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL3_Init()?");
 
-    if (!ImGui_ImplOpenGL3_InitLoader()) // Lazily init loader if not already done for e.g. DLL boundaries.
-        return false;
+    //if (!ImGui_ImplOpenGL3_InitLoader()) // Lazily init loader if not already done for e.g. DLL boundaries.
+    //    return false;
 
     if (!bd->ShaderHandle)
         return ImGui_ImplOpenGL3_CreateDeviceObjects();
@@ -465,7 +465,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (fb_width <= 0 || fb_height <= 0)
         return;
 
-    ImGui_ImplOpenGL3_InitLoader();
+    ImGui_ImplOpenGL3_InitLoader(); // Lazily init loader if not already done for e.g. DLL boundaries.
 
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 
