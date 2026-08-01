@@ -662,34 +662,63 @@ NSString *translateInputForKeyDown(NSEvent *event, UInt32 *deadKeyState)
 {
     // http://stackoverflow.com/questions/12547007/convert-key-code-into-key-equivalent-string
     // http://stackoverflow.com/questions/8263618/convert-virtual-key-code-to-unicode-string
+    NSString *result = nil;
+    TISInputSourceRef fkis;
+    CFDataRef layoutData;
+    UniChar unicodeString[4] = {};
+    UniCharCount realLength = 0;
+    const UInt8 *bytes;
+    const UCKeyboardLayout *keyboardLayout;
+    CGEventFlags flags;
+    UInt32 keyModifiers;
+    OSStatus status;
+    
+    if (!event || !deadKeyState)
+        return nil;
 
-    const size_t unicodeStringLength = 4;
-    UniChar unicodeString[unicodeStringLength]= { 0, };
-    UniCharCount reallength= 0;
-    NSString *nsstring= nil;
+    fkis = TISCopyCurrentKeyboardInputSource();
+    if (!fkis)
+        return nil;
 
-    TISInputSourceRef fkis= TISCopyCurrentKeyboardInputSource();
-    if (fkis) {
-        CFDataRef cflayoutdata= (CFDataRef)TISGetInputSourceProperty(fkis, kTISPropertyUnicodeKeyLayoutData);
-        const UCKeyboardLayout *keyboardlayout= (const UCKeyboardLayout *)CFDataGetBytePtr(cflayoutdata);
-        CGEventFlags flags = [event modifierFlags];
-        UInt32 keymodifiers = (flags >> 16) & 0xFF;
+    layoutData = (CFDataRef)
+        TISGetInputSourceProperty(fkis, kTISPropertyUnicodeKeyLayoutData);
 
-        UCKeyTranslate(keyboardlayout,
-                            [event keyCode], kUCKeyActionDown, keymodifiers,
-                            LMGetKbdType(), 0,
-                            deadKeyState,
-                            unicodeStringLength, &reallength, unicodeString);
-        ::CFRelease(fkis);
-    }
+    if (!layoutData || CFDataGetLength(layoutData) == 0)
+        goto cleanup;
 
+    bytes = CFDataGetBytePtr(layoutData);
+    if (!bytes)
+        goto cleanup;
 
-    if (reallength>0) {
-        nsstring= (NSString *)CFStringCreateWithCharacters(kCFAllocatorDefault, unicodeString, reallength);
-    }
+    keyboardLayout =
+        reinterpret_cast<const UCKeyboardLayout *>(bytes);
+    flags = event.modifierFlags;
+    keyModifiers =
+        (static_cast<UInt64>(flags) >> 16) & 0xff;
 
-    return nsstring;
+    status = UCKeyTranslate(
+        keyboardLayout,
+        static_cast<UInt16>(event.keyCode),
+        kUCKeyActionDown,
+        keyModifiers,
+        LMGetKbdType(),
+        0,
+        deadKeyState,
+        4,
+        &realLength,
+        unicodeString
+    );
+
+    if (status == noErr && realLength > 0) {
+        result = [NSString stringWithCharacters:unicodeString
+                                         length:realLength];
+     }
+ 
+cleanup:
+    CFRelease(fkis);
+    return result;
 }
+
 
 // Must only be called for a mouse event, otherwise an exception occurs
 // (Note that NSEventTypeScrollWheel is considered "other input". Oddly enough an exception does not occur with it, but the value will sometimes be wrong!)
@@ -809,6 +838,13 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
+
+        if (event.type == NSEventTypeKeyDown)
+        {
+            ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+            NSString *utf8Key = translateInputForKeyDown(event, &bd->DeadKeyState);
+            io.AddInputCharactersUTF8(utf8Key.UTF8String);
+        }
 
         return io.WantCaptureKeyboard;
     }
