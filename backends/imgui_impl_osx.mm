@@ -793,7 +793,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
     {
-        if ([event isARepeat] && event.type == NSEventTypeKeyUp)
+        if ([event isARepeat])
         {
             return io.WantCaptureKeyboard;
         }
@@ -802,13 +802,6 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
-
-        if (event.type == NSEventTypeKeyDown)
-        {
-            ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-            NSString *utf8Key = translateInputForKeyDown(event, &bd->DeadKeyState);
-            io.AddInputCharactersUTF8(utf8Key.UTF8String);
-        }
 
         return io.WantCaptureKeyboard;
     }
