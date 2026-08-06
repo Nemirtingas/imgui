@@ -11,7 +11,7 @@
 
 //Bool XQueryPointer(Display* display, Window w, Window* root_return, Window* child_return, int* root_x_return, int* root_y_return, int* win_x_return, int* win_y_return, unsigned int* mask_return);
 
-IMGUI_IMPL_API bool     ImGui_ImplX11_Init(void* display, void* window, void* XQueryPointerFunction = nullptr);
+IMGUI_IMPL_API bool     ImGui_ImplX11_Init(void* display, unsigned int window, void* XQueryPointerFunction = nullptr);
 IMGUI_IMPL_API void     ImGui_ImplX11_Shutdown();
 IMGUI_IMPL_API bool     ImGui_ImplX11_NewFrame();
 

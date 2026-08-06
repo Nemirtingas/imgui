@@ -11,7 +11,7 @@
 
 //Bool XQueryPointer(Display* display, Window w, Window* root_return, Window* child_return, int* root_x_return, int* root_y_return, int* win_x_return, int* win_y_return, unsigned int* mask_return);
 
-IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(/*xcb_connection_t**/ void* connection, /*xcb_window_t*/ void* window);
+IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(/*xcb_connection_t**/ void* connection, /*xcb_window_t*/ unsigned int window, void* xcb_query_pointer_reply_ptr);
 IMGUI_IMPL_API void     ImGui_ImplXCB_Shutdown();
 IMGUI_IMPL_API bool     ImGui_ImplXCB_NewFrame();
 
@@ -23,5 +23,5 @@ IMGUI_IMPL_API bool     ImGui_ImplXCB_NewFrame();
 // - Intentionally commented out in a '#if 0' block to avoid dragging dependencies on <X11/*> from this helper.
 // - You should COPY the line below into your .cpp code to forward declare the function and then you can call it.
 #if 0
-extern IMGUI_IMPL_API int ImGui_ImplXCB_EventHandler(xcb_generic_event_t *event);
+extern IMGUI_IMPL_API int ImGui_ImplXCB_EventHandler(xcb_generic_event_t *event, xcb_generic_event_t* nextEvent);
 #endif

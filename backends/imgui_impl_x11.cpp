@@ -173,7 +173,7 @@ static const char* ImGui_ImplX11_GetClipboardText(ImGuiContext* ctx)
     return bd->ClipboardBuffer;
 }
 
-bool    ImGui_ImplX11_Init(void *display, void *window, void* XQueryPointerFunction)
+bool    ImGui_ImplX11_Init(void *display, unsigned int window, void* XQueryPointerFunction)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
@@ -194,7 +194,7 @@ bool    ImGui_ImplX11_Init(void *display, void *window, void* XQueryPointerFunct
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
     bd->hDisplay = reinterpret_cast<Display*>(display);
-    bd->hWindow = reinterpret_cast<Window>(window);
+    bd->hWindow = static_cast<Window>(window);
     bd->WantUpdateHasGamepad = true;
     bd->TicksPerSecond = 1000000000.0f / (static_cast<uint64_t>(tsres.tv_nsec) + static_cast<uint64_t>(tsres.tv_sec)*1000000000);
     bd->Time = static_cast<uint64_t>(ts.tv_nsec) + static_cast<uint64_t>(ts.tv_sec)*1000000000;

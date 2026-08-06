@@ -39,6 +39,7 @@
 struct ImGui_ImplXCB_Data
 {
     xcb_connection_t*    hConnection;
+    uint32_t             hWindow;
     xcb_key_symbols_t*   KeySyms;
     bool                 MouseTracked;
     int                  MouseButtonsDown;
@@ -47,6 +48,8 @@ struct ImGui_ImplXCB_Data
     ImGuiMouseCursor     LastMouseCursor;
     bool                 HasGamepad;
     bool                 WantUpdateHasGamepad;
+
+    decltype(::xcb_query_pointer_reply)* _xcb_query_pointer_reply;
 
     ImGui_ImplXCB_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -60,7 +63,7 @@ static ImGui_ImplXCB_Data* ImGui_ImplXCB_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplXCB_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
 }
 
-IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(void* connection)
+IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(void* connection, unsigned int window, void* xcb_query_pointer_reply_ptr)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
@@ -71,14 +74,17 @@ IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(void* connection)
     io.BackendPlatformName = "imgui_impl_xcb";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-    //io.GetClipboardTextFn = ImGui_ImplX11_GetClipboardText;
-    //io.SetClipboardTextFn = ImGui_ImplX11_SetClipboardText;
+
+    // ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    // platform_io.Platform_GetClipboardTextFn = nullptr;
+    // platform_io.Platform_SetClipboardTextFn = nullptr;
 
     timespec ts, tsres;
     clock_getres(CLOCK_MONOTONIC_RAW, &tsres);
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
-    bd->hConnection = reinterpret_cast<xcb_connection_t*>(connection);
+    bd->hConnection = static_cast<xcb_connection_t*>(connection);
+    bd->hWindow = window;
     bd->WantUpdateHasGamepad = true;
     bd->TicksPerSecond = 1000000000.0f / (static_cast<uint64_t>(tsres.tv_nsec) + static_cast<uint64_t>(tsres.tv_sec) * 1000000000);
     bd->Time = static_cast<uint64_t>(ts.tv_nsec) + static_cast<uint64_t>(ts.tv_sec) * 1000000000;
@@ -86,9 +92,9 @@ IMGUI_IMPL_API bool     ImGui_ImplXCB_Init(void* connection)
     //bd->ClipboardBuffer = (char*)malloc(sizeof(char) * 256);
     //bd->ClipboardBufferSize = 256;
     //
-    //bd->XQueryPointer = XQueryPointerFunction == nullptr
-    //    ? &XQueryPointer
-    //    : (decltype(XQueryPointer)*)XQueryPointerFunction;
+    bd->_xcb_query_pointer_reply = xcb_query_pointer_reply_ptr == nullptr
+        ? &xcb_query_pointer_reply
+        : reinterpret_cast<decltype(xcb_query_pointer_reply)*>(xcb_query_pointer_reply_ptr);
 
     bd->KeySyms = xcb_key_symbols_alloc(bd->hConnection);
 
@@ -104,10 +110,13 @@ IMGUI_IMPL_API void     ImGui_ImplXCB_Shutdown()
 {
     ImGui_ImplXCB_Data* bd = ImGui_ImplXCB_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_GetClipboardTextFn = nullptr;
+    platform_io.Platform_SetClipboardTextFn = nullptr;
+
     ImGuiIO& io = ImGui::GetIO();
 
-    io.GetClipboardTextFn = nullptr;
-    io.SetClipboardTextFn = nullptr;
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
 
@@ -139,9 +148,71 @@ static void ImGui_ImplXCB_UpdateKeyModifiers()
     //io.AddKeyEvent(ImGuiMod_Super, GetKeyState(bd->hDisplay, XK_Super_L, szKey) || GetKeyState(bd->hDisplay, XK_Super_R, szKey));
 }
 
+static void ImGui_ImplXCB_UpdateMouseData()
+{
+    ImGui_ImplXCB_Data* bd = ImGui_ImplXCB_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(bd->hWindow != 0);
+
+    const bool is_app_focused = true;//(::GetForegroundWindow() == bd->hWnd);
+    if (is_app_focused)
+    {
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        if (io.WantSetMousePos)
+        {
+            //POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+            //if (::ClientToScreen(bd->hWnd, &pos))
+            //    ::SetCursorPos(pos.x, pos.y);
+        }
+
+        // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered or captured)
+        if (!io.WantSetMousePos && !bd->MouseTracked)
+        {
+            auto cookie = xcb_query_pointer(bd->hConnection, bd->hWindow);
+            auto* reply = bd->_xcb_query_pointer_reply(bd->hConnection, cookie, nullptr);
+
+            if (reply)
+            {
+                io.AddMousePosEvent((float)reply->win_x, (float)reply->win_y);
+
+                free(reply);
+            }
+        }
+    }
+}
+
 IMGUI_IMPL_API bool     ImGui_ImplXCB_NewFrame()
 {
-    return false;
+    ImGui_ImplXCB_Data* bd = ImGui_ImplXCB_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO();
+
+    auto cookie = xcb_get_geometry(bd->hConnection, bd->hWindow);
+
+    xcb_generic_error_t* error = nullptr;
+    auto* reply = xcb_get_geometry_reply(bd->hConnection, cookie, &error);
+
+    if (reply == nullptr)
+    {
+        if (error != nullptr)
+            free(error);
+    }
+    else
+    {
+        io.DisplaySize.x = (float)reply->width;
+        io.DisplaySize.y = (float)reply->height;
+    }
+
+    timespec ts, tsres;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+
+    uint64_t current_time = static_cast<uint64_t>(ts.tv_nsec) + static_cast<uint64_t>(ts.tv_sec) * 1000000000;
+
+    io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
+    bd->Time = current_time;
+
+    ImGui_ImplXCB_UpdateMouseData();
+
+    return true;
 }
 
 static ImGuiKey ImGui_ImplXCB_VirtualKeyToImGuiKey(uint32_t param)
@@ -324,12 +395,11 @@ static int ImGui_ImplXCB_HandleKeyEvent(xcb_key_press_event_t* event, ImGui_Impl
     return vk;
 }
 
-IMGUI_IMPL_API int ImGui_ImplXCB_EventHandler(xcb_generic_event_t* event, xcb_generic_event_t* next_event)
+IMGUI_IMPL_API int ImGui_ImplXCB_EventHandler(xcb_generic_event_t* event, xcb_generic_event_t* nextEvent)
 {
     ImGui_ImplXCB_Data* bd = ImGui_ImplXCB_GetBackendData();
     if (ImGui::GetCurrentContext() == NULL)
         return 0;
-
 
     ImGuiIO& io = ImGui::GetIO();
     const auto eventType = event->response_type & ~0x80;
@@ -372,7 +442,7 @@ IMGUI_IMPL_API int ImGui_ImplXCB_EventHandler(xcb_generic_event_t* event, xcb_ge
         case XCB_KEY_RELEASE:
         {
             xcb_key_press_event_t* e = (xcb_key_press_event_t*)event;
-            xcb_key_press_event_t* ne = (xcb_key_press_event_t*)next_event;
+            xcb_key_press_event_t* ne = (xcb_key_press_event_t*)nextEvent;
             if (ne != nullptr)
             {
                 // We should check the keycode too, but there are complex behaviors when holding Shift and pressing a Keypad key.
