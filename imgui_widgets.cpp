@@ -187,6 +187,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
         ItemSize(text_size, 0.0f);
         if (!ItemAdd(bb, 0))
             return;
+        IMGUI_TEST_ENGINE_ITEM_TEXT(bb, NULL, NULL, text_begin, text_end);
 
         // Render (we don't hide text after ## in this end-user function)
         RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
@@ -263,6 +264,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size, 0.0f);
         ItemAdd(bb, 0);
+        IMGUI_TEST_ENGINE_ITEM_TEXT(bb, NULL, NULL, text_begin, text_end);
     }
 }
 
@@ -413,6 +415,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, 0))
         return;
+    IMGUI_TEST_ENGINE_ITEM_TEXT(total_bb, label, label_end, value_text_begin, value_text_end);
 
     // Render
     RenderTextClipped(value_bb.Min + style.FramePadding, value_bb.Max, value_text_begin, value_text_end, &value_size, ImVec2(0.0f, 0.0f));
@@ -448,6 +451,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const ImRect bb(pos, pos + total_size);
     if (!ItemAdd(bb, 0))
         return;
+    IMGUI_TEST_ENGINE_ITEM_TEXT(bb, NULL, NULL, text_begin, text_end);
 
     // Render
     ImU32 text_col = GetColorU32(ImGuiCol_Text);
@@ -822,6 +826,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     //    CloseCurrentPopup();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "Button");
     return pressed;
 }
 
@@ -864,6 +869,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg, ImGuiBut
     RenderNavCursor(bb, id);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, str_id, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "InvisibleButton");
     return pressed;
 }
 
@@ -892,6 +898,7 @@ bool ImGui::ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size, ImGuiBu
     RenderArrow(window->DrawList, bb.Min + ImVec2(ImMax(0.0f, (size.x - g.FontSize) * 0.5f), ImMax(0.0f, (size.y - g.FontSize) * 0.5f)), text_col, dir);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, str_id, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "ArrowButton");
     return pressed;
 }
 
@@ -1202,6 +1209,8 @@ bool ImGui::ImageButtonEx(ImGuiID id, ImTextureRef tex_ref, const ImVec2& image_
     else
         window->DrawList->AddImage(tex_ref, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
 
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "ImageButton");
+
     return pressed;
 }
 
@@ -1261,6 +1270,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
         if (!is_multi_select || !g.BoxSelectState.UnclipMode || !g.BoxSelectState.UnclipRect.Overlaps(total_bb)) // Extra layer of "no logic clip" for box-select support
         {
             IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+            IMGUI_TEST_ENGINE_ITEM_VALUE(id, "Checkbox", ImGuiDataType_Bool, v, 1);
             return false;
         }
 
@@ -1277,6 +1287,9 @@ bool ImGui::Checkbox(const char* label, bool* v)
         MultiSelectItemFooter(id, &checked, &pressed, ImGuiMultiSelectFlags_CheckboxMode_);
     else if (pressed)
         checked = !checked;
+
+    // [Nemirtingas] Remote control: the hook may write a new value, the edition is then reported as usual.
+    (void)IMGUI_TEST_ENGINE_ITEM_EDIT(id, "Checkbox", ImGuiDataType_Bool, &checked, NULL, NULL, NULL, true);
 
     if (*v != checked)
     {
@@ -1415,6 +1428,7 @@ bool ImGui::RadioButton(const char* label, bool active)
         RenderText(label_pos, label, label_end, false);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_VALUE(id, "RadioButton", ImGuiDataType_Bool, &active, 1);
     return pressed;
 }
 
@@ -1488,6 +1502,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
             RenderTextClipped(ImVec2(ImClamp(text_x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
         }
     }
+    IMGUI_TEST_ENGINE_ITEM_TEXT(bb, NULL, NULL, overlay, NULL);
 }
 
 void ImGui::Bullet()
@@ -1566,6 +1581,7 @@ bool ImGui::TextLink(const char* label)
     PopStyleColor();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "TextLink");
     return pressed;
 }
 
@@ -1752,6 +1768,7 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
     ItemSize(min_size, text_baseline_y);
     if (!ItemAdd(bb, id))
         return;
+    IMGUI_TEST_ENGINE_ITEM_TEXT(bb, NULL, NULL, label, label_end);
 
     const float sep1_x1 = pos.x;
     const float sep2_x2 = bb.Max.x;
@@ -2006,6 +2023,9 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     }
     if (label_size.x > 0)
         RenderText(ImVec2(bb.Max.x + style.ItemInnerSpacing.x, bb.Min.y + style.FramePadding.y), label, label_end, false);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Openable | (popup_open ? ImGuiItemStatusFlags_Opened : 0));
+    IMGUI_TEST_ENGINE_ITEM_VALUE(id, "Combo", ImGuiDataType_String, preview_value, 1);
 
     if (!popup_open)
         return false;
@@ -2788,7 +2808,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
 
     // Drag behavior
-    const bool value_changed = DragBehavior(id, data_type, p_data, v_speed, p_min, p_max, format, flags);
+    bool value_changed = DragBehavior(id, data_type, p_data, v_speed, p_min, p_max, format, flags);
+    // [Nemirtingas] Remote control: the hook may write a new value, the edition is then reported as usual.
+    if (IMGUI_TEST_ENGINE_ITEM_EDIT(id, "Drag", data_type, p_data, p_min, p_max, format, true))
+        value_changed = true;
     if (value_changed)
         MarkItemEdited(id);
 
@@ -3382,7 +3405,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
 
     // Slider behavior
     ImRect grab_bb;
-    const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
+    bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
+    // [Nemirtingas] Remote control: the hook may write a new value, the edition is then reported as usual.
+    if (IMGUI_TEST_ENGINE_ITEM_EDIT(id, "Slider", data_type, p_data, p_min, p_max, format, true))
+        value_changed = true;
     if (value_changed)
         MarkItemEdited(id);
 
@@ -3535,7 +3561,10 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
 
     // Slider behavior
     ImRect grab_bb;
-    const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags | ImGuiSliderFlags_Vertical, &grab_bb);
+    bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags | ImGuiSliderFlags_Vertical, &grab_bb);
+    // [Nemirtingas] Remote control: the hook may write a new value, the edition is then reported as usual.
+    if (IMGUI_TEST_ENGINE_ITEM_EDIT(id, "VSlider", data_type, p_data, p_min, p_max, format, true))
+        value_changed = true;
     if (value_changed)
         MarkItemEdited(id);
 
@@ -3860,6 +3889,10 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
             value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
         }
     }
+
+    // [Nemirtingas] Remote control: the hook may write a new value, the edition is then reported as usual.
+    if (IMGUI_TEST_ENGINE_ITEM_EDIT(g.LastItemData.ID, "InputScalar", data_type, p_data, NULL, NULL, format, (flags & ImGuiInputTextFlags_ReadOnly) == 0))
+        value_changed = ret = true;
 
     // Step buttons
     if (has_step_buttons)
@@ -5739,6 +5772,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         MarkItemEdited(id);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Inputable);
+    IMGUI_TEST_ENGINE_ITEM_VALUE(id, (flags & ImGuiInputTextFlags_Multiline) ? "InputTextMultiline" : "InputText", ImGuiDataType_String, (flags & ImGuiInputTextFlags_Password) ? NULL : buf, 1);
     if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
         return validated;
     else
@@ -6506,6 +6540,8 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, desc_id, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_VALUE(id, "ColorButton", ImGuiDataType_Float, &col.x, 4);
 
     if (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaOpaque))
         flags &= ~(ImGuiColorEditFlags_AlphaNoBg | ImGuiColorEditFlags_AlphaPreviewHalf);
@@ -7007,6 +7043,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushOverrideID(id);
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
+        IMGUI_TEST_ENGINE_ITEM_WIDGET(g.LastItemData.ID, (flags & ImGuiTreeNodeFlags_CollapsingHeader) == ImGuiTreeNodeFlags_CollapsingHeader ? "CollapsingHeader" : "TreeNode");
         return is_open;
     }
 
@@ -7188,6 +7225,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         TreePushOverrideID(id); // Could use TreePush(label) but this avoid computing twice
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, (flags & ImGuiTreeNodeFlags_CollapsingHeader) == ImGuiTreeNodeFlags_CollapsingHeader ? "CollapsingHeader" : "TreeNode");
     return is_open;
 }
 
@@ -7581,6 +7619,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // Users of BeginMultiSelect()/EndMultiSelect() scope: you may call ImGui::IsItemToggledSelection() to retrieve
     // selection toggle, only useful if you need that state updated (e.g. for rendering purpose) before reaching EndMultiSelect().
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_VALUE(id, "Selectable", ImGuiDataType_Bool, &selected, 1);
     return pressed; //-V1020
 }
 
@@ -9059,6 +9098,7 @@ int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_get
     // Return hovered index or -1 if none are hovered.
     // This is currently not exposed in the public API because we need a larger redesign of the whole thing, but in the short-term we are making it available in PlotEx().
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, plot_type == ImGuiPlotType_Lines ? "PlotLines" : "PlotHistogram");
     return idx_hovered;
 }
 
@@ -9566,6 +9606,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         ClosePopupToLevel(g.BeginPopupStack.Size, true);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "Menu");
     PopID();
 
     if (g.ActiveId == id && want_open)
@@ -9721,6 +9762,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
 
 
     IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
+    IMGUI_TEST_ENGINE_ITEM_VALUE(g.LastItemData.ID, "MenuItem", ImGuiDataType_Bool, &selected, 1);
     if (!enabled)
         EndDisabled();
     PopID();
@@ -10652,6 +10694,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // If the user called us with *p_open == false, we early out and don't render.
     // We make a call to ItemAdd() so that attempts to use a contextual popup menu with an implicit ID won't use an older ID.
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "TabItem");
     if (p_open && !*p_open)
     {
         ItemAdd(ImRect(), id, NULL, ImGuiItemFlags_NoNav);

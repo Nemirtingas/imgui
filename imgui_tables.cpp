@@ -3461,6 +3461,7 @@ void ImGui::TableHeader(const char* label)
         TableOpenContextMenu(column_n);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_WIDGET(id, "TableHeader");
 }
 
 // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
