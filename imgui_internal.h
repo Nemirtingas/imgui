@@ -4098,9 +4098,25 @@ extern const char*  ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiI
 #define IMGUI_TEST_ENGINE_ITEM_ADD(_ID,_BB,_ITEM_DATA)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemAdd(&g, _ID, _BB, _ITEM_DATA)    // Register item bounding box
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemInfo(&g, _ID, _LABEL, _FLAGS)    // Register item label and status flags (optional)
 #define IMGUI_TEST_ENGINE_LOG(_FMT,...)                     ImGuiTestEngineHook_Log(&g, _FMT, __VA_ARGS__)                                      // Custom log entry from user land into test log
+
+// [Nemirtingas] Remote control hooks, used by the ingame_overlay MCP server. Only called while g.TestEngineHookItems is set.
+// - ItemValue: tells which widget submitted the item 'id', and its value if it has one: 'components' values of 'data_type' at 'p_data'
+//   (ImGuiDataType_Bool for a bool, ImGuiDataType_String for a zero terminated string, p_data == NULL when there is no value to show).
+//   When 'writable', the hook may write a new value at 'p_data' and return true: the widget then reports an edition as if the user did it.
+// - ItemText: text displayed without an item id (Text(), LabelText(), BulletText(), SeparatorText(), ProgressBar()), 'label' may be NULL.
+extern bool         ImGuiTestEngineHook_ItemValue(ImGuiContext* ctx, ImGuiID id, const char* widget, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format, bool writable);
+extern void         ImGuiTestEngineHook_ItemText(ImGuiContext* ctx, const ImRect& bb, const char* label, const char* label_end, const char* text, const char* text_end);
+#define IMGUI_TEST_ENGINE_ITEM_WIDGET(_ID,_WIDGET)                                          if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemValue(&g, _ID, _WIDGET, ImGuiDataType_COUNT, NULL, 0, NULL, NULL, NULL, false)
+#define IMGUI_TEST_ENGINE_ITEM_VALUE(_ID,_WIDGET,_DATA_TYPE,_P_DATA,_COMPONENTS)            if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemValue(&g, _ID, _WIDGET, _DATA_TYPE, (void*)(_P_DATA), _COMPONENTS, NULL, NULL, NULL, false)
+#define IMGUI_TEST_ENGINE_ITEM_EDIT(_ID,_WIDGET,_DATA_TYPE,_P_DATA,_P_MIN,_P_MAX,_FORMAT,_WRITABLE) (g.TestEngineHookItems && ImGuiTestEngineHook_ItemValue(&g, _ID, _WIDGET, _DATA_TYPE, _P_DATA, 1, _P_MIN, _P_MAX, _FORMAT, _WRITABLE))
+#define IMGUI_TEST_ENGINE_ITEM_TEXT(_BB,_LABEL,_LABEL_END,_TEXT,_TEXT_END)                  if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemText(&g, _BB, _LABEL, _LABEL_END, _TEXT, _TEXT_END)
 #else
 #define IMGUI_TEST_ENGINE_ITEM_ADD(_ID,_BB,_ITEM_DATA)      ((void)0)
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      ((void)g)
+#define IMGUI_TEST_ENGINE_ITEM_WIDGET(_ID,_WIDGET)                                          ((void)0)
+#define IMGUI_TEST_ENGINE_ITEM_VALUE(_ID,_WIDGET,_DATA_TYPE,_P_DATA,_COMPONENTS)            ((void)0)
+#define IMGUI_TEST_ENGINE_ITEM_EDIT(_ID,_WIDGET,_DATA_TYPE,_P_DATA,_P_MIN,_P_MAX,_FORMAT,_WRITABLE) (false)
+#define IMGUI_TEST_ENGINE_ITEM_TEXT(_BB,_LABEL,_LABEL_END,_TEXT,_TEXT_END)                  ((void)0)
 #endif
 
 //-----------------------------------------------------------------------------
