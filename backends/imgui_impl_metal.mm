@@ -50,9 +50,12 @@
 
 #if defined(__i386__) || defined(__i386) || defined(i386)
 #define EXPLICIT_PROPERTIES 1
-#endif
-
+// The explicit properties don't retain their values: the caches would hold released objects.
 #define DISABLE_CACHE 1
+#else
+// Built with ARC (-fobjc-arc), like upstream: the caches are safe and avoid a new pipeline every frame.
+#define DISABLE_CACHE 0
+#endif
 
 #pragma mark - Support classes
 
