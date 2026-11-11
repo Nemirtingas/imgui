@@ -734,7 +734,7 @@ double _lastBufferCachePurge;
 
     // TODO: FIXME
     #if !DISABLE_CACHE
-    @synchronized(self.bufferCache)
+    @synchronized(self.bufferCacheLock)
     {
         // Purge old buffers that haven't been useful for a while
         if (now - self.lastBufferCachePurge > 1.0)
